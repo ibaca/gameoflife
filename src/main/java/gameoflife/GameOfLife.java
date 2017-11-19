@@ -1,10 +1,10 @@
 package gameoflife;
 
+import static java.util.Collections.unmodifiableSet;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toSet;
 import static java.util.stream.IntStream.range;
 
-import java.util.Collections;
 import java.util.Set;
 import java.util.function.BiPredicate;
 import java.util.stream.Stream;
@@ -26,7 +26,7 @@ public class GameOfLife {
 
         public final Set<XY> alive;
 
-        public Board(Stream<XY> alive) { this.alive = Collections.unmodifiableSet(alive.collect(toSet())); }
+        public Board(Stream<XY> alive) { this.alive = unmodifiableSet(alive.collect(toSet())); }
 
         boolean isAlive(XY p) { return alive.contains(p); }
 
@@ -38,17 +38,7 @@ public class GameOfLife {
 
         public Board push(BiPredicate<Boolean, Integer> rule) {
             return new Board(alive.stream().flatMap(Board::expand).distinct()
-                    .map(p -> new Board.Cell(p, rule.test(isAlive(p), neighborhoods(p))))
-                    .filter(c -> c.alive).map(c -> c.p));
-        }
-
-        static class Cell {
-            final XY p;
-            final boolean alive;
-            Cell(XY p, boolean alive) {
-                this.p = p;
-                this.alive = alive;
-            }
+                    .filter(p -> rule.test(isAlive(p), neighborhoods(p))));
         }
     }
 
