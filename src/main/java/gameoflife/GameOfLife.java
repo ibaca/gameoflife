@@ -40,6 +40,13 @@ public class GameOfLife {
             return new Board(alive.stream().flatMap(Board::expand).distinct()
                     .filter(p -> rule.test(isAlive(p), neighborhoods(p))));
         }
+
+        public Board toggle(XY xy) {
+            Stream<XY> stream = alive.stream();
+            if (isAlive(xy)) stream = stream.filter(i -> !i.equals(xy));
+            else stream = Stream.concat(stream, Stream.of(xy));
+            return new Board(stream);
+        }
     }
 
     public static class XY implements Comparable<XY> {
