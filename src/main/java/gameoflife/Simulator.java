@@ -12,6 +12,9 @@ import static org.jboss.gwt.elemento.core.Elements.body;
 import static org.jboss.gwt.elemento.core.Elements.button;
 import static org.jboss.gwt.elemento.core.Elements.div;
 import static org.jboss.gwt.elemento.core.EventType.click;
+import static org.jboss.gwt.elemento.core.EventType.mousedown;
+import static org.jboss.gwt.elemento.core.EventType.mousemove;
+import static org.jboss.gwt.elemento.core.EventType.mouseup;
 
 import com.google.gwt.core.client.EntryPoint;
 import com.google.gwt.core.client.GWT;
@@ -76,6 +79,16 @@ public class Simulator implements EntryPoint {
                 Observable.interval(1000 / 4, MILLISECONDS).doOnSubscribe(s -> play.textContent = "x3"))
                 .repeat().doOnNext(n -> console.log(n));
 
+        Observable<XY> mouseDrag$ = fromEvent(board, mousedown).flatMap(e -> fromEvent(board, mousemove)
+                .flatMapMaybe(el -> {
+                    if (!(el.target instanceof HTMLElement)) return Maybe.empty();
+                    JsPropertyMapOfAny ds = JsPropertyMap.of(el.target);
+                    if (!ds.has("__xy")) return Maybe.empty();
+                    return Maybe.just(ds.getAny("__xy").<XY>cast());
+                })
+                .distinctUntilChanged()
+                .takeUntil(fromEvent(board, mouseup)));
+
         Function<Board, Board> tick = board -> board.push(GameOfLife::rule);
         Observable.<Function<Board, Board>>empty()
                 .mergeWith(fromEvent(clear, click).map(ev -> board -> new Board(Stream.empty())))
@@ -83,14 +96,7 @@ public class Simulator implements EntryPoint {
                 .mergeWith(fromEvent(play, click).map(e -> TRUE).startWith(TRUE).toFlowable(DROP)
                         .zipWith(playMode, (e, mode) -> mode, false, 1).toObservable()
                         .switchMap(o -> o.map(n -> tick), 1))
-                .mergeWith(fromEvent(board, click)
-                        .flatMapMaybe(el -> {
-                            if (!(el.target instanceof HTMLElement)) return Maybe.empty();
-                            JsPropertyMapOfAny ds = JsPropertyMap.of(el.target);
-                            if (!ds.has("__xy")) return Maybe.empty();
-                            return Maybe.just(ds.getAny("__xy").<XY>cast());
-                        })
-                        .map(xy -> board -> board.toggle(xy)))
+                .mergeWith(mouseDrag$.map(xy -> board -> board.toggle(xy)))
                 .scan(Board.of(), (state, change) -> change.apply(state))
                 .doOnNext(state -> {
                     Elements.iterator(board.querySelectorAll("." + CSS.alive()))
