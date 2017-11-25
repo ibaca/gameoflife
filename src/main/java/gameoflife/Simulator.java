@@ -2,7 +2,10 @@ package gameoflife;
 
 import static com.intendia.rxgwt2.client.RxGwt.retryDelay;
 import static com.intendia.rxgwt2.elemento.RxElemento.fromEvent;
+import static elemental2.dom.DomGlobal.document;
 import static elemental2.dom.DomGlobal.window;
+import static io.reactivex.Maybe.fromCallable;
+import static io.reactivex.Observable.merge;
 import static java.lang.Boolean.TRUE;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.function.Function.identity;
@@ -14,17 +17,20 @@ import static org.jboss.gwt.elemento.core.EventType.click;
 import static org.jboss.gwt.elemento.core.EventType.mousedown;
 import static org.jboss.gwt.elemento.core.EventType.mousemove;
 import static org.jboss.gwt.elemento.core.EventType.mouseup;
+import static org.jboss.gwt.elemento.core.EventType.touchend;
+import static org.jboss.gwt.elemento.core.EventType.touchmove;
+import static org.jboss.gwt.elemento.core.EventType.touchstart;
 
 import com.google.gwt.core.client.EntryPoint;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.resources.client.ClientBundle;
 import com.google.gwt.resources.client.CssResource;
+import elemental2.dom.Event;
 import elemental2.dom.HTMLButtonElement;
 import elemental2.dom.HTMLDivElement;
 import elemental2.dom.HTMLElement;
 import gameoflife.GameOfLife.Board;
 import gameoflife.GameOfLife.XY;
-import io.reactivex.Maybe;
 import io.reactivex.Observable;
 import java.util.HashMap;
 import java.util.Map;
@@ -77,9 +83,14 @@ public class Simulator implements EntryPoint {
                 Observable.interval(1000 / 4, MILLISECONDS).doOnSubscribe(s -> play.textContent = "x3")))
                 .flatMap(identity()).iterator();
 
-        Observable<XY> mouseDrag$ = fromEvent(board, mousedown)
-                .flatMap(e -> fromEvent(board, mousemove).startWith(e).takeUntil(fromEvent(board, mouseup))
-                        .flatMapMaybe(el -> Maybe.fromCallable(() -> Js.<JsPropertyMap<XY>>cast(el.target).get("__xy")))
+        Observable<XY> mouseDrag$ = fromEvent(board, mousedown).doOnNext(Event::preventDefault)
+                .switchMap(e -> fromEvent(board, mousemove).startWith(e).takeUntil(fromEvent(board, mouseup))
+                        .flatMapMaybe(ev -> fromCallable(() -> Js.<JsPropertyMap<XY>>cast(ev.target).get("__xy")))
+                        .distinctUntilChanged());
+        Observable<XY> touchDrag$ = fromEvent(board, touchstart).doOnNext(Event::preventDefault)
+                .switchMap(e -> fromEvent(board, touchmove).startWith(e).takeUntil(fromEvent(board, touchend))
+                        .map(ev -> document.elementFromPoint(ev.touches.getAt(0).clientX, ev.touches.getAt(0).clientY))
+                        .flatMapMaybe(el -> fromCallable(() -> Js.<JsPropertyMap<XY>>cast(el).get("__xy")))
                         .distinctUntilChanged());
 
         Function<Board, Board> tick = board -> board.push(GameOfLife::rule);
@@ -88,7 +99,7 @@ public class Simulator implements EntryPoint {
                 .mergeWith(fromEvent(next, click).map(ev -> tick))
                 .mergeWith(fromEvent(play, click).map(e -> TRUE).startWith(TRUE)
                         .zipWith(playMode, (e, m) -> m).switchMap(o -> o.map(n -> tick), 1))
-                .mergeWith(mouseDrag$.map(xy -> board -> board.toggle(xy)))
+                .mergeWith(merge(mouseDrag$, touchDrag$).map(xy -> board -> board.toggle(xy)))
                 .scan(Board.of(), (state, change) -> change.apply(state))
                 .doOnNext(state -> {
                     Elements.iterator(board.querySelectorAll("." + CSS.alive()))
