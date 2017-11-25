@@ -64,6 +64,18 @@ div.alive {
     margin-left: 5px;
 }
 
+.fork {
+    position: absolute;
+    display: block;
+    margin: 0;
+    top: 0;
+    right: 0;
+    width: 200px;
+    height: 200px;
+    overflow: hidden;
+    z-index: 9999;
+}
+
 .fork a {
     color: #EDE66A;
     text-decoration: none;
@@ -73,34 +85,17 @@ div.alive {
     transition: 0.5s;
     font-size: 1rem;
     line-height: 1rem;
-}
-
-@media (min-aspect-ratio: 4/3) {
-    .fork {
-        position: absolute;
-        display: block;
-        margin: 0;
-        top: 0;
-        right: 0;
-        width: 200px;
-        height: 200px;
-        overflow: hidden;
-        z-index: 9999;
-    }
-
-    .fork a {
-        box-sizing: content-box;
-        position: absolute;
-        top: 50px;
-        right: -70px;
-        width: 200px;
-        transform: rotate(45deg);
-        border: 4px solid #87AFE7;
-        border-radius: 2px;
-        background: #2f50932f;
-        box-shadow: 0 0 10px 1px rgba(135, 175, 231, 0.5), inset 0 0 10px 1px rgba(135, 175, 231, 0.5);
-        text-shadow: 0 0 10px rgba(237, 230, 106, 0.6);
-    }
+    box-sizing: content-box;
+    position: absolute;
+    top: 50px;
+    right: -70px;
+    width: 200px;
+    transform: rotate(45deg);
+    border: 4px solid #87AFE7;
+    border-radius: 2px;
+    background: #2f50932f;
+    box-shadow: 0 0 10px 1px rgba(135, 175, 231, 0.5), inset 0 0 10px 1px rgba(135, 175, 231, 0.5);
+    text-shadow: 0 0 10px rgba(237, 230, 106, 0.6);
 }
 
 .fork a:hover {

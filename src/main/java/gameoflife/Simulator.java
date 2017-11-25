@@ -2,11 +2,10 @@ package gameoflife;
 
 import static com.intendia.rxgwt2.client.RxGwt.retryDelay;
 import static com.intendia.rxgwt2.elemento.RxElemento.fromEvent;
-import static elemental2.dom.DomGlobal.console;
 import static elemental2.dom.DomGlobal.window;
-import static io.reactivex.BackpressureStrategy.DROP;
 import static java.lang.Boolean.TRUE;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.function.Function.identity;
 import static org.jboss.gwt.elemento.core.Elements.a;
 import static org.jboss.gwt.elemento.core.Elements.body;
 import static org.jboss.gwt.elemento.core.Elements.button;
@@ -25,7 +24,6 @@ import elemental2.dom.HTMLDivElement;
 import elemental2.dom.HTMLElement;
 import gameoflife.GameOfLife.Board;
 import gameoflife.GameOfLife.XY;
-import io.reactivex.Flowable;
 import io.reactivex.Maybe;
 import io.reactivex.Observable;
 import java.util.HashMap;
@@ -33,8 +31,8 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
+import jsinterop.base.Js;
 import jsinterop.base.JsPropertyMap;
-import jsinterop.base.JsPropertyMapOfAny;
 import org.jboss.gwt.elemento.core.Elements;
 
 public class Simulator implements EntryPoint {
@@ -72,30 +70,24 @@ public class Simulator implements EntryPoint {
             }
         }
 
-        Flowable<Observable<?>> playMode = Flowable.just(
+        Iterable<Observable<?>> playMode = () -> Stream.generate(() -> Stream.of(
                 Observable.never().doOnSubscribe(s -> play.textContent = "Play"),
                 Observable.interval(1000, MILLISECONDS).doOnSubscribe(s -> play.textContent = "x1"),
                 Observable.interval(1000 / 2, MILLISECONDS).doOnSubscribe(s -> play.textContent = "x2"),
-                Observable.interval(1000 / 4, MILLISECONDS).doOnSubscribe(s -> play.textContent = "x3"))
-                .repeat().doOnNext(n -> console.log(n));
+                Observable.interval(1000 / 4, MILLISECONDS).doOnSubscribe(s -> play.textContent = "x3")))
+                .flatMap(identity()).iterator();
 
-        Observable<XY> mouseDrag$ = fromEvent(board, mousedown).flatMap(e -> fromEvent(board, mousemove)
-                .flatMapMaybe(el -> {
-                    if (!(el.target instanceof HTMLElement)) return Maybe.empty();
-                    JsPropertyMapOfAny ds = JsPropertyMap.of(el.target);
-                    if (!ds.has("__xy")) return Maybe.empty();
-                    return Maybe.just(ds.getAny("__xy").<XY>cast());
-                })
-                .distinctUntilChanged()
-                .takeUntil(fromEvent(board, mouseup)));
+        Observable<XY> mouseDrag$ = fromEvent(board, mousedown)
+                .flatMap(e -> fromEvent(board, mousemove).startWith(e).takeUntil(fromEvent(board, mouseup))
+                        .flatMapMaybe(el -> Maybe.fromCallable(() -> Js.<JsPropertyMap<XY>>cast(el.target).get("__xy")))
+                        .distinctUntilChanged());
 
         Function<Board, Board> tick = board -> board.push(GameOfLife::rule);
         Observable.<Function<Board, Board>>empty()
                 .mergeWith(fromEvent(clear, click).map(ev -> board -> new Board(Stream.empty())))
                 .mergeWith(fromEvent(next, click).map(ev -> tick))
-                .mergeWith(fromEvent(play, click).map(e -> TRUE).startWith(TRUE).toFlowable(DROP)
-                        .zipWith(playMode, (e, mode) -> mode, false, 1).toObservable()
-                        .switchMap(o -> o.map(n -> tick), 1))
+                .mergeWith(fromEvent(play, click).map(e -> TRUE).startWith(TRUE)
+                        .zipWith(playMode, (e, m) -> m).switchMap(o -> o.map(n -> tick), 1))
                 .mergeWith(mouseDrag$.map(xy -> board -> board.toggle(xy)))
                 .scan(Board.of(), (state, change) -> change.apply(state))
                 .doOnNext(state -> {
@@ -109,7 +101,6 @@ public class Simulator implements EntryPoint {
                 .ignoreElements()
                 .compose(retryDelay(attempt -> GWT.log("ups… something is going wrong", attempt.err)))
                 .subscribe();
-
     }
 
     interface Theme extends ClientBundle {
