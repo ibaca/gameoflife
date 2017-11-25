@@ -93,7 +93,7 @@
                 <version>0.12</version>
                 <configuration>
                     <message>Creating site for ${project.version}</message>
-                    <outputDirectory>${project.build.directory}/${project.build.finalName}/gameoflife</outputDirectory>
+                    <outputDirectory>${project.build.directory}/${project.build.finalName}/app</outputDirectory>
                 </configuration>
             </plugin>
             <plugin>
