@@ -89,7 +89,8 @@ public class Simulator implements EntryPoint {
                         .distinctUntilChanged());
         Observable<XY> touchDrag$ = fromEvent(board, touchstart).doOnNext(Event::preventDefault)
                 .switchMap(e -> fromEvent(board, touchmove).startWith(e).takeUntil(fromEvent(board, touchend))
-                        .map(ev -> document.elementFromPoint(ev.touches.getAt(0).clientX, ev.touches.getAt(0).clientY))
+                        .map(ev -> ev.touches.getAt(0))
+                        .flatMapMaybe(ev -> fromCallable(() -> document.elementFromPoint(ev.clientX, ev.clientY)))
                         .flatMapMaybe(el -> fromCallable(() -> Js.<JsPropertyMap<XY>>cast(el).get("__xy")))
                         .distinctUntilChanged());
 

@@ -1,11 +1,10 @@
 html, body {
     padding: 0;
     margin: 0;
-    width: 100vw;
-    height: 100vh;
-    overflow: hidden;
-
-    background: linear-gradient(to bottom, #1b3061 0%, #192b55 100%);
+    width: 100%;
+    height: 100%;
+    overflow: hidden; /*prevent reload on swipe down */
+    background: linear-gradient(to bottom, #2c5683 0%, #192b55 100%);
 }
 
 * {
@@ -44,13 +43,17 @@ div.alive {
 }
 
 .controls {
+    position: relative;
     display: flex;
     align-items: baseline;
+    box-shadow: 0 0 10px 5px #141452;
+    margin: 0 -2px;
 }
 
 .controls > * {
     flex: auto;
     text-align: center;
+    margin: 0 2px;
 
     border: 4px solid #87AFE7;
     border-radius: 2px;
@@ -58,10 +61,6 @@ div.alive {
     box-shadow: 0 0 10px 1px rgba(135, 175, 231, 0.5), inset 0 0 10px 1px rgba(135, 175, 231, 0.5);
     color: #EDE66A;
     text-shadow: 0 0 10px rgba(237, 230, 106, 0.6);
-}
-
-.controls > * + * {
-    margin-left: 5px;
 }
 
 .fork {
@@ -74,6 +73,7 @@ div.alive {
     height: 200px;
     overflow: hidden;
     z-index: 9999;
+    pointer-events: none;
 }
 
 .fork a {
@@ -96,6 +96,7 @@ div.alive {
     background: #2f50932f;
     box-shadow: 0 0 10px 1px rgba(135, 175, 231, 0.5), inset 0 0 10px 1px rgba(135, 175, 231, 0.5);
     text-shadow: 0 0 10px rgba(237, 230, 106, 0.6);
+    pointer-events: auto;
 }
 
 .fork a:hover {
