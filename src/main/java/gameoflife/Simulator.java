@@ -57,10 +57,12 @@ public class Simulator implements EntryPoint {
                 .add(clear = button("Clear").get())
                 .add(next = button("Next").get())
                 .add(play = button("Play").get()));
-        body().add(div().css(CSS.fork()).add(a("https://github.com/ibaca/gameoflife").add("Fork me on GitHub")));
+        body().add(div().css(CSS.fork())
+                .add(a("https://github.com/ibaca/gameoflife").textContent("Fork me on GitHub")));
 
         Map<XY, HTMLElement> cells = new HashMap<>();
-        double yMax = window.innerWidth / 20, xMax = window.innerHeight / 20;
+        double yMax = window.innerWidth / 20., xMax = window.innerHeight / 20.;
+        Stream.Builder<XY> initialAlive = Stream.builder();
         for (int x = 0; x < xMax; x++) {
             for (int y = 0; y < yMax; y++) {
                 XY xy = new XY(x, y);
@@ -70,9 +72,10 @@ public class Simulator implements EntryPoint {
                         + "height: " + size + "px; "
                         + "top: " + top + "px; "
                         + "left: " + left + "px").get();
-                JsPropertyMap.of(el).set("__xy", xy);
+                Js.asPropertyMap(el).set("__xy", xy);
                 board.appendChild(el);
                 cells.put(xy, el);
+                if (Math.random() > .7) initialAlive.add(xy);
             }
         }
 
@@ -101,7 +104,7 @@ public class Simulator implements EntryPoint {
                 .mergeWith(fromEvent(play, click).map(e -> TRUE).startWith(TRUE)
                         .zipWith(playMode, (e, m) -> m).switchMap(o -> o.map(n -> tick), 1))
                 .mergeWith(merge(mouseDrag$, touchDrag$).map(xy -> board -> board.toggle(xy)))
-                .scan(Board.of(), (state, change) -> change.apply(state))
+                .scan(Board.of(initialAlive.build().toArray(XY[]::new)), (state, change) -> change.apply(state))
                 .doOnNext(state -> {
                     Elements.iterator(board.querySelectorAll("." + CSS.alive()))
                             .forEachRemaining(e -> e.classList.remove(CSS.alive()));
